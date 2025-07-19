@@ -2,7 +2,7 @@ FROM ubuntu:latest
 
 ENV DEBIAN_FRONTEND=noninteractive
 
-# Update, upgrade, and install base dependencies
+# Update, upgrade, and install base dependencies plus Python LSP packages (excluding ruff)
 RUN apt-get update && apt-get -y upgrade && \
     apt-get install -y \
       locales \
@@ -23,7 +23,22 @@ RUN apt-get update && apt-get -y upgrade && \
       build-essential \
       npm \
       nodejs \
-      python3-flask
+      python3-flask \
+      # Python LSP core and plugins (equivalent to python-lsp-server[all] minus ruff)
+      python3-pylsp \
+      flake8 \
+      pylint \
+      python3-autopep8 \
+      python3-mccabe \
+      python3-pycodestyle \
+      python3-pydocstyle \
+      python3-pyflakes \
+      python3-rope \
+      python3-whatthepatch \
+      python3-yapf \
+      python3-mypy \
+      python3-pylsp-black \
+      python3-pylsp-isort
 
 # Set up Swedish keyboard and timezone (language stays default)
 RUN sed -i '/sv_SE.UTF-8/s/^# //g' /etc/locale.gen && \
@@ -57,11 +72,27 @@ RUN git clone https://github.com/3cnf-f/tmp_nvim.git /root/.config/ && \
 RUN git clone --depth 1 https://github.com/junegunn/fzf.git /root/.fzf && \
     /root/.fzf/install --all
 
+# Install Python LSP (pyright via npm only now)
+RUN npm install -g pyright
+
+# Install JavaScript/TypeScript LSP (typescript-language-server)
+RUN npm install -g typescript typescript-language-server
+
+# Install HTML LSP
+RUN npm install -g vscode-langservers-extracted
+
+# Install windsurf/cursor LSP (assuming you mean "cursor" from windsurf/cursor)
+RUN npm install -g @windsurf/cursor
+
 # Clean up
 RUN apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Setup SSH server
 RUN mkdir /var/run/sshd
+
+# Enable root SSH login with password (change 'root' to a secure password!)
+RUN echo 'root:root' | chpasswd
+RUN sed -i 's/#\?PermitRootLogin .*/PermitRootLogin yes/' /etc/ssh/sshd_config
 
 EXPOSE 22
 
