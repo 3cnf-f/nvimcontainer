@@ -27,17 +27,22 @@ RUN apt-get update && apt-get -y upgrade && \
 
 # Set up Swedish keyboard and timezone (language stays default)
 RUN sed -i '/sv_SE.UTF-8/s/^# //g' /etc/locale.gen && \
+    sed -i '/en_US.UTF-8/s/^# //g' /etc/locale.gen && \
     locale-gen && \
-    update-locale LANG=en_US.UTF-8 && \
+    update-locale LC_ALL=en_US.UTF-8 LANG=en_US.UTF-8 && \
     echo 'XKBLAYOUT="se"' > /etc/default/keyboard && \
     dpkg-reconfigure -f noninteractive keyboard-configuration && \
     ln -fs /usr/share/zoneinfo/Europe/Stockholm /etc/localtime && \
     dpkg-reconfigure -f noninteractive tzdata
 
+ENV LANG=en_US.UTF-8 \
+    LC_ALL=en_US.UTF-8
+
 # Install Neovim (latest release, portable binary)
 RUN curl -LO https://github.com/neovim/neovim/releases/latest/download/nvim-linux-x86_64.tar.gz && \
     rm -rf /opt/nvim && \
     tar -C /opt -xzf nvim-linux-x86_64.tar.gz && \
+    mv /opt/nvim-linux-x86_64 /opt/nvim && \
     ln -s /opt/nvim/bin/nvim /usr/local/bin/nvim && \
     rm nvim-linux-x86_64.tar.gz
 
@@ -46,26 +51,11 @@ RUN git clone https://github.com/3cnf-f/tmp_nvim.git /root/.config/ && \
     cat /root/.config/addto_bashrc >>/root/.bashrc && \
     cat /root/.config/addto_bashaliases >>/root/.bash_aliases && \
     mkdir -p /root/.ssh && \
-    cat /root/.config/addto_ssh_config >>/root/.ssh/config && \
-    source /root/.bashrc
+    cat /root/.config/addto_ssh_config >>/root/.ssh/config
 
 # Install fzf (as in the setup)
 RUN git clone --depth 1 https://github.com/junegunn/fzf.git /root/.fzf && \
     /root/.fzf/install --all
-
-# Install Python LSP (pyright via npm, plus pip LSPs)
-RUN pip install --upgrade pip && \
-    pip install 'python-lsp-server[all]' && \
-    npm install -g pyright
-
-# Install JavaScript/TypeScript LSP (typescript-language-server)
-RUN npm install -g typescript typescript-language-server
-
-# Install HTML LSP
-RUN npm install -g vscode-langservers-extracted
-
-# Install windsurf/cursor LSP (assuming you mean "cursor" from windsurf/cursor)
-RUN npm install -g @windsurf/cursor
 
 # Clean up
 RUN apt-get clean && rm -rf /var/lib/apt/lists/*
