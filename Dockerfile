@@ -43,7 +43,7 @@ RUN git clone https://github.com/3cnf-f/tmp_nvim.git /root/.config/ && \
     cat /root/.config/.tmux.conf >>/root/.tmux.conf &&\
     mkdir -p /root/.tmux/plugins &&\
     git clone https://github.com/tmux-plugins/tpm /root/.tmux/plugins/tpm &&\
-    mkdir /root/docs/ &&\
+    mkdir -p /root/docs/ &&\
     cp /root/.config/docs /root/docs/ &&\
     mkdir -p /root/.ssh && \
     cat /root/.config/addto_ssh_config >>/root/.ssh/config &&\
