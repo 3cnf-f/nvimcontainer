@@ -14,11 +14,12 @@ RUN apt-get update && apt-get -y upgrade && \
       nano \
       openssh-server \
       #  python3-pip \
-      # python3-venv \
-      #pipx \
+      #  python3-venv \
+      #  pipx \
       xz-utils \
       zstd \
       unzip \
+      tmux \
       #iproute2 \
       build-essential 
       # python3-flask \
@@ -39,12 +40,21 @@ RUN curl -LO https://github.com/neovim/neovim/releases/latest/download/nvim-linu
 RUN git clone https://github.com/3cnf-f/tmp_nvim.git /root/.config/ && \
     cat /root/.config/addto_bashrc >>/root/.bashrc && \
     cat /root/.config/addto_bashaliases >>/root/.bash_aliases && \
+    cat /root/.config/.tmux.conf >>/root/.tmux.conf &&\
+    mkdir -p /root/.tmux/plugins &&\
+    git clone https://github.com/tmux-plugins/tpm /root/.tmux/plugins/tpm &&\
+    mkdir /root/docs/ &&\
+    cp /root/.config/docs /root/docs/ &&\
     mkdir -p /root/.ssh && \
     cat /root/.config/addto_ssh_config >>/root/.ssh/config &&\
     cat /root/.config/add_locale_to_bashrc >> ~/.bashrc &&\
     cat /root/.config/addto_def_locale >> /etc/default/locale &&\
     cat /root/.config/addto_locale_gen >>  /etc/locale.gen&&\
     locale-gen 
+
+
+
+
 
 
 # Install fzf (as in the setup)
