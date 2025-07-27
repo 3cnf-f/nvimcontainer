@@ -36,7 +36,7 @@ RUN curl -LO https://github.com/neovim/neovim/releases/latest/download/nvim-linu
     ln -s /opt/nvim/bin/nvim /usr/local/bin/nvim && \
     rm nvim-linux-x86_64.tar.gz
 
-# Clone the custom Neovim config
+# Clone the custom Neovim and tmux config
 RUN git clone https://github.com/3cnf-f/tmp_nvim.git /root/.config/ && \
     cat /root/.config/addto_bashrc >>/root/.bashrc && \
     cat /root/.config/addto_bashaliases >>/root/.bash_aliases && \
