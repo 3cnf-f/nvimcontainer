@@ -6,7 +6,7 @@ ENV LANG=C.UTF-8 \
     DEBIAN_FRONTEND=noninteractive \
     PATH="/root/.local/bin:$PATH"
 
-# 1. Base Dependencies & Python
+# 1. Base Dependencies
 RUN apt-get update && apt-get -y upgrade && \
     apt-get install -y \
       git \
@@ -27,7 +27,7 @@ RUN apt-get update && apt-get -y upgrade && \
       fd-find \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# 2. Install Neovim (Latest Stable)
+# 2. Install Neovim
 RUN curl -LO https://github.com/neovim/neovim/releases/latest/download/nvim-linux-x86_64.tar.gz && \
     rm -rf /opt/nvim && \
     tar -C /opt -xzf nvim-linux-x86_64.tar.gz && \
@@ -35,12 +35,10 @@ RUN curl -LO https://github.com/neovim/neovim/releases/latest/download/nvim-linu
     ln -s /opt/nvim/bin/nvim /usr/local/bin/nvim && \
     rm nvim-linux-x86_64.tar.gz
 
-# 3. Python Tools (Jedi via pipx)
+# 3. Python Tools
 RUN pipx install jedi-language-server
 
 # 4. Clone Config & Setup Tmux
-# Note: This clones your GitHub repo. If you want to test LOCAL changes, 
-# you should mount your local folder when running the container (see instructions below).
 RUN git clone https://github.com/3cnf-f/tmp_nvim.git /root/.config/ && \
     cat /root/.config/addto_bashrc >> /root/.bashrc && \
     cat /root/.config/addto_bashaliases >> /root/.bash_aliases && \
@@ -57,20 +55,30 @@ RUN git clone https://github.com/3cnf-f/tmp_nvim.git /root/.config/ && \
 RUN git clone --depth 1 https://github.com/junegunn/fzf.git /root/.fzf && \
     /root/.fzf/install --all
 
-# 6. SSH Key Generation & Display
-# This will generate the key and print the .pub content to the build log
-RUN ssh-keygen -t ed25519 -f /root/.ssh/git_ed25519 -N "" && \
-    echo "\n\n====== [ SSH PUBLIC KEY ] ======" && \
-    cat /root/.ssh/git_ed25519.pub && \
-    echo "================================\n\n"
+# 6. Create Entrypoint Script (Run-time Key Generation)
+# We write this script to /usr/local/bin and make it executable.
+# It checks for a key, generates it if missing, prints it, then runs the command.
+RUN echo '#!/bin/bash' > /usr/local/bin/entrypoint.sh && \
+    echo 'KEY_FILE=/root/.ssh/git_ed25519' >> /usr/local/bin/entrypoint.sh && \
+    echo 'if [ ! -f "$KEY_FILE" ]; then' >> /usr/local/bin/entrypoint.sh && \
+    echo '  echo "🔑 Generating new SSH key..."' >> /usr/local/bin/entrypoint.sh && \
+    echo '  ssh-keygen -t ed25519 -f "$KEY_FILE" -N "" -q' >> /usr/local/bin/entrypoint.sh && \
+    echo 'fi' >> /usr/local/bin/entrypoint.sh && \
+    echo 'echo ""' >> /usr/local/bin/entrypoint.sh && \
+    echo 'echo "====== [ SSH PUBLIC KEY ] ======"' >> /usr/local/bin/entrypoint.sh && \
+    echo 'cat "${KEY_FILE}.pub"' >> /usr/local/bin/entrypoint.sh && \
+    echo 'echo "================================"' >> /usr/local/bin/entrypoint.sh && \
+    echo 'echo ""' >> /usr/local/bin/entrypoint.sh && \
+    echo 'exec "$@"' >> /usr/local/bin/entrypoint.sh && \
+    chmod +x /usr/local/bin/entrypoint.sh
 
 # 7. Git Configuration
-# We use a build argument for the email. Default is set if not provided.
 ARG TMP_GITUSER=temp_dev@example.com
 RUN git config --global user.name "3cnf-f" && \
     git config --global user.email "$TMP_GITUSER" && \
     echo "echo 'Git Configured: 3cnf-f <$TMP_GITUSER>'" >> /root/.bashrc
 
-# 8. Entrypoint
+# 8. Set Entrypoint
 WORKDIR /root
+ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
 CMD ["/bin/bash"]
