@@ -47,7 +47,7 @@ Once you have the token, paste it into your run command:
 
 
 ```
-podman run -it --rm \
+podman run -it  \
   --name nvim-test \
   -e TMP_GITUSER="" \
   -e GH_TOKEN="" \
