@@ -4,9 +4,12 @@ ENV LANG=C.UTF-8 \
     TERM=xterm-256color \
     TZ=Europe/Stockholm \
     DEBIAN_FRONTEND=noninteractive \
-    PATH="/root/.local/bin:$PATH"
+    PATH="/root/.local/bin:$PATH" \
+    # Defaults (can be overridden by podman run -e)
+    TMP_GITUSER="temp_dev@example.com" \
+    GH_TOKEN=""
 
-# 1. Base Dependencies
+# 1. Base Dependencies & GitHub CLI
 RUN apt-get update && apt-get -y upgrade && \
     apt-get install -y \
       git \
@@ -25,6 +28,13 @@ RUN apt-get update && apt-get -y upgrade && \
       build-essential \
       ripgrep \
       fd-find \
+      gpg \
+    && mkdir -p -m 755 /etc/apt/keyrings \
+    && wget -qO- https://cli.github.com/packages/githubcli-archive-keyring.gpg | tee /etc/apt/keyrings/githubcli-archive-keyring.gpg > /dev/null \
+    && chmod go+r /etc/apt/keyrings/githubcli-archive-keyring.gpg \
+    && echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | tee /etc/apt/sources.list.d/github-cli.list > /dev/null \
+    && apt-get update \
+    && apt-get install -y gh \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # 2. Install Neovim
@@ -38,7 +48,7 @@ RUN curl -LO https://github.com/neovim/neovim/releases/latest/download/nvim-linu
 # 3. Python Tools
 RUN pipx install jedi-language-server
 
-# 4. Clone Config & Setup Tmux
+# 4. Clone Config
 RUN git clone https://github.com/3cnf-f/tmp_nvim.git /root/.config/ && \
     cat /root/.config/addto_bashrc >> /root/.bashrc && \
     cat /root/.config/addto_bashaliases >> /root/.bash_aliases && \
@@ -55,11 +65,10 @@ RUN git clone https://github.com/3cnf-f/tmp_nvim.git /root/.config/ && \
 RUN git clone --depth 1 https://github.com/junegunn/fzf.git /root/.fzf && \
     /root/.fzf/install --all
 
-# 6. Create Entrypoint Script (Run-time Key Generation)
-# We write this script to /usr/local/bin and make it executable.
-# It checks for a key, generates it if missing, prints it, then runs the command.
+# 6. Entrypoint (Runtime Config for SSH, Git, and GH)
 RUN echo '#!/bin/bash' > /usr/local/bin/entrypoint.sh && \
     echo 'KEY_FILE=/root/.ssh/git_ed25519' >> /usr/local/bin/entrypoint.sh && \
+    # --- SSH Key Generation ---
     echo 'if [ ! -f "$KEY_FILE" ]; then' >> /usr/local/bin/entrypoint.sh && \
     echo '  echo "🔑 Generating new SSH key..."' >> /usr/local/bin/entrypoint.sh && \
     echo '  ssh-keygen -t ed25519 -f "$KEY_FILE" -N "" -q' >> /usr/local/bin/entrypoint.sh && \
@@ -69,16 +78,23 @@ RUN echo '#!/bin/bash' > /usr/local/bin/entrypoint.sh && \
     echo 'cat "${KEY_FILE}.pub"' >> /usr/local/bin/entrypoint.sh && \
     echo 'echo "================================"' >> /usr/local/bin/entrypoint.sh && \
     echo 'echo ""' >> /usr/local/bin/entrypoint.sh && \
+    # --- Dynamic Git Config ---
+    echo 'echo "⚙️  Configuring Git User: 3cnf-f <$TMP_GITUSER>"' >> /usr/local/bin/entrypoint.sh && \
+    echo 'git config --global user.name "3cnf-f"' >> /usr/local/bin/entrypoint.sh && \
+    echo 'git config --global user.email "$TMP_GITUSER"' >> /usr/local/bin/entrypoint.sh && \
+    # --- GH Auth Logic ---
+    echo 'if [ ! -z "$GH_TOKEN" ]; then' >> /usr/local/bin/entrypoint.sh && \
+    echo '  echo "🚀 Authenticating GitHub CLI..."' >> /usr/local/bin/entrypoint.sh && \
+    echo '  echo "$GH_TOKEN" | gh auth login --with-token' >> /usr/local/bin/entrypoint.sh && \
+    echo '  gh auth setup-git' >> /usr/local/bin/entrypoint.sh && \
+    echo '  echo "✅ GitHub CLI Authenticated!"' >> /usr/local/bin/entrypoint.sh && \
+    echo 'else' >> /usr/local/bin/entrypoint.sh && \
+    echo '  echo "ℹ️  No GH_TOKEN provided. Run `gh auth login` manually if needed."' >> /usr/local/bin/entrypoint.sh && \
+    echo 'fi' >> /usr/local/bin/entrypoint.sh && \
+    echo 'echo ""' >> /usr/local/bin/entrypoint.sh && \
     echo 'exec "$@"' >> /usr/local/bin/entrypoint.sh && \
     chmod +x /usr/local/bin/entrypoint.sh
 
-# 7. Git Configuration
-ARG TMP_GITUSER=temp_dev@example.com
-RUN git config --global user.name "3cnf-f" && \
-    git config --global user.email "$TMP_GITUSER" && \
-    echo "echo 'Git Configured: 3cnf-f <$TMP_GITUSER>'" >> /root/.bashrc
-
-# 8. Set Entrypoint
 WORKDIR /root
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
 CMD ["/bin/bash"]
