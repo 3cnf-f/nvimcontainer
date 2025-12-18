@@ -1,10 +1,6 @@
 # nvimcontainer
 
 
-## before first run of NVIM in container
-```
-rm .config/nvim/lazy-lock.json
-```
 
 ### setup windsurf, to get the token from a container w no clipboard or browser capabilities
 ```
