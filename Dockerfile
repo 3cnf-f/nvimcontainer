@@ -53,7 +53,6 @@ RUN git clone https://github.com/3cnf-f/tmp_nvim.git /root/.config/ && \
     # === THE FIX ===
     # Delete the lockfile so Lazy resolves the latest (working) versions of plugins
     # instead of the old broken ones from the repo.
-    rm -f /root/.config/nvim/lazy-lock.json && \ 
     # ===============
     cat /root/.config/addto_bashrc >> /root/.bashrc && \
     cat /root/.config/addto_bashaliases >> /root/.bash_aliases && \
