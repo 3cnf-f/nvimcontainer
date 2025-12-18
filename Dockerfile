@@ -101,6 +101,13 @@ RUN echo '#!/bin/bash' > /usr/local/bin/entrypoint.sh && \
     echo 'exec "$@"' >> /usr/local/bin/entrypoint.sh && \
     chmod +x /usr/local/bin/entrypoint.sh
 
+# 7. Pre-install Plugins (The "Bootstrap" Fix)
+# This runs Neovim once during the build to download/compile plugins.
+# We explicitly ignore errors (|| true) because Treesitter might complain about 
+# missing parsers on the first run, but it will download the plugin code correctly.
+RUN nvim --headless "+Lazy! sync" +qa || true
+
+
 WORKDIR /root
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
 CMD ["/bin/bash"]
