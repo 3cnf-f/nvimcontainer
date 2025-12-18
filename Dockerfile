@@ -48,8 +48,13 @@ RUN curl -LO https://github.com/neovim/neovim/releases/latest/download/nvim-linu
 # 3. Python Tools
 RUN pipx install jedi-language-server
 
-# 4. Clone Config
+# 4. Clone Config & Setup Tmux
 RUN git clone https://github.com/3cnf-f/tmp_nvim.git /root/.config/ && \
+    # === THE FIX ===
+    # Delete the lockfile so Lazy resolves the latest (working) versions of plugins
+    # instead of the old broken ones from the repo.
+    rm -f /root/.config/nvim/lazy-lock.json && \ 
+    # ===============
     cat /root/.config/addto_bashrc >> /root/.bashrc && \
     cat /root/.config/addto_bashaliases >> /root/.bash_aliases && \
     cat /root/.config/.tmux.conf >> /root/.tmux.conf && \
@@ -60,6 +65,7 @@ RUN git clone https://github.com/3cnf-f/tmp_nvim.git /root/.config/ && \
     mkdir -p /root/.ssh && \
     touch /root/.ssh/config && \
     cat /root/.config/addto_ssh_config >> /root/.ssh/config
+
 
 # 5. Install FZF
 RUN git clone --depth 1 https://github.com/junegunn/fzf.git /root/.fzf && \
